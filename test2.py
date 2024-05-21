@@ -107,8 +107,10 @@ for pdf_file in pdf_files:
 
 
         for i in range(len(section_headers)-1):
+            if global_index == 1:
+                sheet.cell(row=5, column=i+5, value=section_headers[i][0].replace("(bold)",""))
+
             print(section_headers[i])
-            sheet.cell(row=5, column=i+5, value=section_headers[i][0].replace("(bold)",""))
             sheet.cell(row=global_index + 6, column=i+5, value=f'{section_headers[i][1]} to {section_headers[i][2]}')
 
             column_letter = openpyxl.utils.get_column_letter(i+5)
