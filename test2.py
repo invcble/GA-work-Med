@@ -56,7 +56,9 @@ for pdf_file in pdf_files:
                             whole_text += text
                     whole_text += "\n"
 
-    wholeText = whole_text.replace("© 2023 Press Ganey Associates LLC † Custom Question ^ Focus Question", "")
+    wholeText = whole_text.replace("© 2023 Press Ganey Associates LLC", "")
+    wholeText = wholeText.replace("† Custom Question", "")
+    wholeText = wholeText.replace("^ Focus Question", "")
 
     surveyArray = wholeText.split("Client Name:")
     surveyArray.pop(0)
@@ -111,10 +113,11 @@ for pdf_file in pdf_files:
                 sheet.cell(row=5, column=i+5, value=section_headers[i][0].replace("(bold)",""))
 
             print(section_headers[i])
-            sheet.cell(row=global_index + 6, column=i+5, value=f'{section_headers[i][1]} to {section_headers[i][2]}')
+            # sheet.cell(row=global_index + 6, column=i+5, value=f'{section_headers[i][1]} to {section_headers[i][2]}')
+            sheet.cell(row=global_index + 6, column=i+5, value=filtered_text[section_headers[i][1]:section_headers[i][2]])
 
             column_letter = openpyxl.utils.get_column_letter(i+5)
-            sheet.column_dimensions[column_letter].width = 15
+            sheet.column_dimensions[column_letter].width = 60
 
         print(global_index)
 workbook.save("Temp.xlsx")
