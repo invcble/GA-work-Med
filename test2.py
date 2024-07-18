@@ -58,7 +58,9 @@ for pdf_file in pdf_files:
 
     wholeText = whole_text.replace("© 2023 Press Ganey Associates LLC", "")
     wholeText = wholeText.replace("† Custom Question", "")
+    wholeText = wholeText.replace("†", "")
     wholeText = wholeText.replace("^ Focus Question", "")
+    wholeText = wholeText.replace("^", "")
 
     surveyArray = wholeText.split("Client Name:")
     surveyArray.pop(0)
@@ -114,7 +116,24 @@ for pdf_file in pdf_files:
 
             print(section_headers[i])
             # sheet.cell(row=global_index + 6, column=i+5, value=f'{section_headers[i][1]} to {section_headers[i][2]}')
-            sheet.cell(row=global_index + 6, column=i+5, value=filtered_text[section_headers[i][1]:section_headers[i][2]])
+            
+            cell_text = filtered_text[section_headers[i][1]:section_headers[i][2]]
+            if i == 0:
+                # sheet.cell(row=global_index + 6, column=i+5, value=cell_text[cell_text.find(chec1)+19:cell_text.find(chec2)])
+                
+                cell_text = cell_text.replace('Using any number from 0 to 10, where 0 is the worst hospital', '')
+                cell_text = cell_text.replace('possible and 10 is the best hospital possible, what', '')
+                cell_text = cell_text.replace('number would you use to', '')
+                cell_text = cell_text.replace('rate this hospital?', '')
+                cell_text = cell_text.replace('Would you recommend', '')
+                cell_text = cell_text.replace('this hospital', '')
+                cell_text = cell_text.replace('to your friends and family?', '')
+                sheet.cell(row=global_index + 6, column=i+5, value=cell_text)
+                # if cell_text.find(chec) != -1:
+
+                #     sheet.cell(row=global_index + 6, column=i+5, value="boooooom")
+            else:
+                sheet.cell(row=global_index + 6, column=i+5, value=cell_text)
 
             column_letter = openpyxl.utils.get_column_letter(i+5)
             sheet.column_dimensions[column_letter].width = 60
@@ -125,3 +144,15 @@ workbook.save("Temp.xlsx")
 
 #1. add identifiers
 #2. break down particular section
+# "(bold)Background Questions(bold)
+# 1. Using any number from 0 to 10, where 0 is the worst hospital possible and 10 is the best hospital possible, what 
+# number would you use to rate this hospital?
+# 6
+# 2. Would you recommend this hospital to your friends and family?
+# PROBABLY YES
+# "141 205 214 218
+# -1 # -1 # 70
+# 173 # -1 # -1
+
+#1. find all combinations by .replace(known question, '')
+#2. for each known question, string[string.find(known)+len : string.find(known)+len + 2]
