@@ -1,8 +1,19 @@
+import pdfplumber
 import fitz
 import re
 import os
+import sys
 import openpyxl
 from collections import defaultdict
+
+def extract_metadata(text):
+    metadata = {}
+    lines = text.split('\n')
+    for line in lines[:10]:  # Assume metadata is in the first 10 lines
+        if ':' in line:
+            key, value = line.split(':', 1)
+            metadata[key.strip()] = value.strip()
+    return metadata
 
 def extract_sections(text):
     sections = re.split(r'\(bold\)(.*?)\(bold\)', text)[1::2]
@@ -27,6 +38,7 @@ def extract_qa_pairs(section_content):
     return qa_pairs
 
 def process_survey(survey_text):
+    metadata = extract_metadata(survey_text)
     sections = extract_sections(survey_text)
     survey_data = defaultdict(list)
     
@@ -35,7 +47,7 @@ def process_survey(survey_text):
         for question, answer in qa_pairs:
             survey_data[section].append((question, answer))
     
-    return survey_data
+    return metadata, survey_data
 
 def extract_text_from_pdf(pdf_path):
     whole_text = ""
@@ -65,15 +77,28 @@ def extract_text_from_pdf(pdf_path):
     return whole_text
 
 # Main script
-current_path = os.getcwd()
+if getattr(sys, 'frozen', False):
+    current_path = os.path.dirname(sys.executable)
+else:
+    current_path = os.getcwd()
+
+print("Current working path is", current_path)
 pdf_files = [file for file in os.listdir(current_path) if file.endswith(".pdf")]
+
+print(len(pdf_files), "PDFs found!")
+print("Processing PDFs, Please wait!")
 
 workbook = openpyxl.Workbook()
 sheet = workbook.active
 
+# Headers
+headers = ['Survey ID', 'Client Name', 'Site Name', 'Barcode', 'Mode', 'Survey Designator', 
+           'Received Date', 'Service Date', 'Unit', 'Specialty', 'Section', 'Question', 'Answer']
+for col, header in enumerate(headers, start=1):
+    sheet.cell(row=1, column=col, value=header)
+
 row = 2
-headers = []
-header_row_written = False
+survey_id = 1
 
 for pdf_file in pdf_files:
     whole_text = extract_text_from_pdf(os.path.join(current_path, pdf_file))
@@ -81,22 +106,34 @@ for pdf_file in pdf_files:
     survey_array.pop(0)  # Remove any text before the first survey
 
     for survey_text in survey_array:
-        survey_data = process_survey("Client Name:" + survey_text)
+        metadata, survey_data = process_survey("Client Name:" + survey_text)
         
-        if not header_row_written:
-            col = 1
-            for section, qa_pairs in survey_data.items():
-                for question, _ in qa_pairs:
-                    headers.append(f"{section}: {question}")
-                    sheet.cell(row=1, column=col, value=f"{section}: {question}")
-                    col += 1
-            header_row_written = True
-        
-        col = 1
         for section, qa_pairs in survey_data.items():
-            for _, answer in qa_pairs:
-                sheet.cell(row=row, column=col, value=answer)
-                col += 1
-        row += 1
+            for question, answer in qa_pairs:
+                sheet.cell(row=row, column=1, value=survey_id)
+                for col, key in enumerate(['Client Name', 'Site Name', 'Barcode', 'Mode', 'Survey Designator', 
+                                           'Received Date', 'Service Date', 'Unit', 'Specialty'], start=2):
+                    sheet.cell(row=row, column=col, value=metadata.get(key, ''))
+                sheet.cell(row=row, column=11, value=section)
+                sheet.cell(row=row, column=12, value=question)
+                sheet.cell(row=row, column=13, value=answer)
+                row += 1
+        
+        survey_id += 1
+        print(f"Processed survey {survey_id - 1}")
 
-workbook.save("Survey_Results_Grouped_By_Section.xlsx")
+# Adjust column widths
+for column in sheet.columns:
+    max_length = 0
+    column_letter = openpyxl.utils.get_column_letter(column[0].column)
+    for cell in column:
+        try:
+            if len(str(cell.value)) > max_length:
+                max_length = len(cell.value)
+        except:
+            pass
+    adjusted_width = (max_length + 2)
+    sheet.column_dimensions[column_letter].width = adjusted_width
+
+workbook.save("Complete_Survey_Results.xlsx")
+print("Processing complete. Results saved in 'Complete_Survey_Results.xlsx'")
