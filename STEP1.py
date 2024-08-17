@@ -13,7 +13,15 @@ def extract_metadata(text):
         if ':' in line:
             key, value = line.split(':', 1)
             metadata[key.strip()] = value.strip()
-    return metadata
+
+    # Remove (bold) tags from both keys and values in the metadata
+    cleaned_metadata = {re.sub(r'\(bold\)', '', k).strip(): re.sub(r'\(bold\)', '', v).strip() for k, v in metadata.items()}
+
+    # Print the cleaned metadata for debugging
+    # print("Cleaned Metadata:", cleaned_metadata)
+
+    return cleaned_metadata
+
 
 def extract_sections(text):
     sections = re.split(r'\(bold\)(.*?)\(bold\)', text)[1::2]
@@ -24,17 +32,50 @@ def extract_qa_pairs(section_content):
     lines = section_content.strip().split('\n')
     qa_pairs = []
     current_question = ""
+    current_answer = ""
+    threshold_length = 90  # Adjust this threshold as needed
+
     for line in lines:
         line = line.strip()
+
+        # If the line starts with a number followed by a period, it's likely the start of a new question
         if re.match(r'^\d+\.', line):
             if current_question:
-                qa_pairs.append((current_question, ""))
+                # Handle empty answer
+                if current_answer.strip() == "":
+                    if "?" in current_question:
+                        parts = current_question.rsplit("?", 1)
+                        current_question = parts[0] + "?"
+                        current_answer = parts[1].strip()
+                    else:
+                        parts = current_question.rsplit(".", 1)
+                        current_question = parts[0] + "."
+                        current_answer = parts[1].strip()
+
+                qa_pairs.append((current_question, current_answer.strip()))
             current_question = line
-        elif current_question:
-            qa_pairs.append((current_question, line))
-            current_question = ""
+            current_answer = ""
+        elif current_question and len(current_question) > threshold_length:
+            # If the current question is long, assume the next line is part of the same question
+            current_question += " " + line
+        else:
+            # Otherwise, assume the line is an answer
+            current_answer += " " + line
+
     if current_question:
-        qa_pairs.append((current_question, ""))
+        # Handle empty answer for the last question
+        if current_answer.strip() == "":
+            if "?" in current_question:
+                parts = current_question.rsplit("?", 1)
+                current_question = parts[0] + "?"
+                current_answer = parts[1].strip()
+            else:
+                parts = current_question.rsplit(".", 1)
+                current_question = parts[0] + "."
+                current_answer = parts[1].strip()
+
+        qa_pairs.append((current_question, current_answer.strip()))
+
     return qa_pairs
 
 def process_survey(survey_text):
@@ -92,8 +133,7 @@ workbook = openpyxl.Workbook()
 sheet = workbook.active
 
 # Headers
-headers = ['Survey ID', 'Client Name', 'Site Name', 'Barcode', 'Mode', 'Survey Designator', 
-           'Received Date', 'Service Date', 'Unit', 'Specialty', 'Section', 'Question', 'Answer']
+headers = ['Survey Designator', 'Received Date', 'Service Date', 'Unit', 'Specialty', 'Barcode', 'Section-Question', 'Answer']
 for col, header in enumerate(headers, start=1):
     sheet.cell(row=1, column=col, value=header)
 
@@ -106,18 +146,20 @@ for pdf_file in pdf_files:
     survey_array.pop(0)  # Remove any text before the first survey
 
     for survey_text in survey_array:
+        survey_text = survey_text.split('Patient Name')[0]
         metadata, survey_data = process_survey("Client Name:" + survey_text)
         
         for section, qa_pairs in survey_data.items():
             for question, answer in qa_pairs:
-                sheet.cell(row=row, column=1, value=survey_id)
-                for col, key in enumerate(['Client Name', 'Site Name', 'Barcode', 'Mode', 'Survey Designator', 
-                                           'Received Date', 'Service Date', 'Unit', 'Specialty'], start=2):
+                # Remove numbering from the question (e.g., "1." or "2.")
+                question_cleaned = re.sub(r'^\d+\.\s*', '', question)
+                section_question = f"{section} - {question_cleaned}"
+                for col, key in enumerate(['Survey Designator', 'Received Date', 'Service Date', 'Unit', 'Specialty', 'Barcode'], start=1):
                     sheet.cell(row=row, column=col, value=metadata.get(key, ''))
-                sheet.cell(row=row, column=11, value=section)
-                sheet.cell(row=row, column=12, value=question)
-                sheet.cell(row=row, column=13, value=answer)
+                sheet.cell(row=row, column=7, value=section_question)
+                sheet.cell(row=row, column=8, value=answer)
                 row += 1
+
         
         survey_id += 1
         print(f"Processed survey {survey_id - 1}")
@@ -135,5 +177,5 @@ for column in sheet.columns:
     adjusted_width = (max_length + 2)
     sheet.column_dimensions[column_letter].width = adjusted_width
 
-workbook.save("Complete_Survey_Results.xlsx")
-print("Processing complete. Results saved in 'Complete_Survey_Results.xlsx'")
+workbook.save("Complete_Survey_Results2.xlsx")
+print("Processing complete. Results saved in 'Complete_Survey_Results2.xlsx'")
