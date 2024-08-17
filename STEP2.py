@@ -4,7 +4,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.styles import Alignment
 
 # Load the Excel file
-file_path = 'Complete_Survey_Results2.xlsx'  # Update this with your file path
+file_path = 'Complete_Survey_Results.xlsx'  # Update this with your file path
 df = pd.read_excel(file_path)
 
 # Identify columns related to comments (assuming they contain the word "comment" or similar)
