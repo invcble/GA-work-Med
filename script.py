@@ -255,3 +255,4 @@ non_comments_wb.save(non_comments_output_file_path)
 
 print(f"Comments saved in '{comments_output_file_path}' with formatting.")
 print(f"Non-comments saved in '{non_comments_output_file_path}' with formatting.")
+input("Press any button to Exit the script...")
