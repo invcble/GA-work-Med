@@ -1,7 +1,6 @@
 import fitz
 import re
 import os
-import sys
 from collections import defaultdict
 import pandas as pd
 import openpyxl
