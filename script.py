@@ -1,6 +1,6 @@
 import fitz
 import re
-import os
+import os, sys
 from collections import defaultdict
 import pandas as pd
 import openpyxl
@@ -123,13 +123,22 @@ def extract_text_from_pdf(pdf_path):
 #     current_path = os.path.dirname(sys.executable)
 # else:
 #     current_path = os.getcwd()
-current_path = input("Please Paste the Path to the Folder with PDF Files: ")
 
-print("Current working path is", current_path)
-pdf_files = [file for file in os.listdir(current_path) if file.endswith(".pdf")]
+while True:
+    try:
+        current_path = input("Please Paste the Path to the Folder with PDF Files: ")
 
-print(len(pdf_files), "PDFs found!")
-print("Processing PDFs, Please wait!")
+        print("Current working path is", current_path)
+        pdf_files = [file for file in os.listdir(current_path) if file.endswith(".pdf")]
+
+        print(len(pdf_files), "PDFs found!")
+        if len(pdf_files) == 0:
+            input("Press Enter to exit the script...")
+            sys.exit()
+        print("Processing PDFs, Please wait!")
+        break
+    except FileNotFoundError:
+        print("Invalid Path!")
 
 workbook = openpyxl.Workbook()
 sheet = workbook.active
@@ -255,4 +264,4 @@ non_comments_wb.save(non_comments_output_file_path)
 
 print(f"Comments saved in '{comments_output_file_path}' with formatting.")
 print(f"Non-comments saved in '{non_comments_output_file_path}' with formatting.")
-input("Press any button to Exit the script...")
+input("Press Enter to exit the script...")
